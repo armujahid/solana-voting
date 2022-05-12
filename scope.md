@@ -10,7 +10,9 @@ Solana voting:
 3) A UI to show counts for each account/proposal
 4) Voting will be closed x number of blocks after proposal submission?
 
-
+Endpoints:
+1) create_proposal(?): Create Proposal
+2) vote(?)
 
 
 Tasks:
