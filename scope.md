@@ -14,6 +14,12 @@ Endpoints:
 1) create_proposal(?): Create Proposal
 2) vote(?)
 
+2022-05-19:
+1) Some pre-selected accounts (chairperson(s)?) will be able to submit proposals/topics and open voting
+2) Each account can vote unlimited number of times but for each vote some SOL will have to be locked/stacked
+3) chairperson(s) will be able to close voting? Or Should we close voting after X number of blocks after openning of voting?
+4) Locked/Stacked SOL will be returned at the end of voting to each voter
+
 
 Tasks:
 * Project Design
