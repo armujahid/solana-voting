@@ -11,8 +11,10 @@ Solana voting:
 4) Voting will be closed x number of blocks after proposal submission?
 
 Endpoints:
-1) create_proposal(?): Create Proposal
-2) vote(?)
+1) create_proposal
+2) open_voting
+3) vote
+4) read_votes?
 
 2022-05-19:
 1) Some pre-selected accounts (chairperson(s)?) will be able to submit proposals/topics and open voting
