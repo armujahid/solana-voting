@@ -1,0 +1,25 @@
+[features]
+seeds = false
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+## /target is excluded from being pushed so upon cloning and 
+## running anchor build and then anchor deploy
+## newly created program addresses have to be pasted below
+## as well as into respective programs and then need to run 
+## anchor build and then anchor deploy
+## AGAIN
+
+[programs.localnet]
+example1 = "EnNAUhQEdDNtNszfguvK5RSkSLDStPLtUqeLpbjayoNq" 
+example2 = "5521eQoUE17iVGZXCwwGApaF6qExq2hkYVviETpfaXQE"
+example3 = "BG8eNGD8vvPpegz6NojiFS2n6yPHV5yt9LJngp1QCkFf"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test1 = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/test_example1_lottery.ts"
+test2 = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/test_example2_rps.ts"
+test3 = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/test_example3_consortium.ts"
+
