@@ -509,22 +509,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "example1"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
-]
-
-[[package]]
-name = "example2"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "num-derive",
- "num-traits",
-]
-
-[[package]]
 name = "example3"
 version = "0.1.0"
 dependencies = [
