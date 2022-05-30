@@ -14,20 +14,29 @@ Endpoints:
 1) create_proposal
 2) open_voting
 3) vote
-4) read_votes?
+4) close_voting
+5) read_votes?
 
-2022-05-19:
+2022-05-19 (updated on 2022-05-30):
 1) Some pre-selected accounts (chairperson(s)?) will be able to submit proposals/topics and open voting
-2) Each account can vote unlimited number of times but for each vote some SOL will have to be locked/stacked
+2) Each account can vote unlimited number of times but for each vote some SOL will have to be locked/stacked (For simplicity I think we should just deposit SOL to Proposal's PDAs)
 3) chairperson(s) will be able to close voting? Or Should we close voting after X number of blocks after openning of voting?
-4) Locked/Stacked SOL will be returned at the end of voting to each voter
+4) Locked/Stacked SOL will be returned at the end of voting to each voter (return all desposited SOL from all PDAs to respective voters after subtracting transaction fee)
+
+
 
 
 Tasks:
 * Project Design
 * Front End (Web, Wallet integration etc.)
+  1) form to submit proposal
+  2) display all submited proposals with their scores (deposited SOL in proposal PDA)
+  3) Display QRCODE/wallet address so that SOL can be transferred to PDAs (1 SOL = 1 Vote)
 * Backend - Smart Contract
-
+  1) Create one PDA per proposal. Keep track of PDA count in count PDA (FE will use that count to find and list all proposal PDAs)
+  2) in Voting phase. keep track of deposited SOL per PDA for each voter (There must be a way to extract this info from blockchain without us keeping track of this info)
+  3) close_voting endpoint that should check for chairperson's signature before closing voting
+  4) In close_voting we should also return all desposited SOL from all PDAs to respective voters after subtracting transaction fee
 User Experience/Flow:
 
 
