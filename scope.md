@@ -29,14 +29,16 @@ Endpoints:
 Tasks:
 * Project Design
 * Front End (Web, Wallet integration etc.)
-  1) form to submit proposal
-  2) display all submited proposals with their scores (deposited SOL in proposal PDA)
-  3) Display QRCODE/wallet address so that SOL can be transferred to PDAs (1 SOL = 1 Vote)
+  1) form to submit proposal (Title, Description)
+  2) display all submited proposals with their scores (deposited SOL in proposal PDA) (Title, Votes = Sol balance, Address of the PDA so that we can use it to deposit SOL) (1 SOL = 1 Vote)
+  3) Close vote screen (with just close button?)
 * Backend - Smart Contract
   1) Create one PDA per proposal. Keep track of PDA count in count PDA (FE will use that count to find and list all proposal PDAs)
   2) in Voting phase. keep track of deposited SOL per PDA for each voter (There must be a way to extract this info from blockchain without us keeping track of this info)
   3) close_voting endpoint that should check for chairperson's signature before closing voting
   4) In close_voting we should also return all desposited SOL from all PDAs to respective voters after subtracting transaction fee
+    OR
+  Transfer deposited SOL to the winning project and get an NFT in return
 User Experience/Flow:
 
 
