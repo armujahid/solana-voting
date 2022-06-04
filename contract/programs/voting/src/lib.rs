@@ -6,87 +6,87 @@ declare_id!("8q9Xm51HBw8s8DknD5P11RvBm2WovX2VageztBf2xdzH");
 mod voting {
     use super::*;       
 
-    // Creates a PDA for the consortium
-    pub fn initialise_consortium(ctx: Context<CreateConsortium>, _seed: String) -> Result<()> {        
-        let consortium: &mut Account<Consortium> = &mut ctx.accounts.consortium;        
-        consortium.chairperson = ctx.accounts.chairperson.key();                         
+    // Creates a PDA for the voting
+    pub fn initialise_voting(ctx: Context<CreateVoting>, _seed: String) -> Result<()> {        
+        let voting: &mut Account<Voting> = &mut ctx.accounts.voting;        
+        voting.chairperson = ctx.accounts.chairperson.key();                         
         Ok(())
     }
 
-    // Creates a PDA for the member
-    pub fn add_member(ctx: Context<AddMember>, weight: u8, propose_answers: bool, member_acc: Pubkey) -> Result<()> {        
-        let member: &mut Account<Member> = &mut ctx.accounts.member;        
-        member.weight = weight;
-        member.key = member_acc;
-        member.propose_answers = propose_answers;        
+    // // Creates a PDA for the member
+    // pub fn add_member(ctx: Context<AddMember>, weight: u8, propose_answers: bool, member_acc: Pubkey) -> Result<()> {        
+    //     let voter: &mut Account<Voter> = &mut ctx.accounts.voter;        
+    //     voter.weight = weight;
+    //     voter.key = member_acc;
+    //     voter.propose_answers = propose_answers;        
+    //     Ok(())
+    // }
+
+    // Creates a PDA for the proposal
+    pub fn add_proposal(ctx: Context<AddProposal>, proposal_proposal: String) -> Result<()> {        
+        let proposal: &mut Account<Proposal> = &mut ctx.accounts.proposal;
+        let voting: &mut Account<Voting> = &mut ctx.accounts.voting;  
+        proposal.proposal = proposal_proposal;        
+        // voting.deadline = proposal_deadline;        
+        voting.proposal_count += 1;   
         Ok(())
     }
 
-    // Creates a PDA for the question
-    pub fn add_question(ctx: Context<AddQuestion>, question_question: String, question_deadline: i64) -> Result<()> {        
-        let question: &mut Account<Question> = &mut ctx.accounts.question;
-        let consortium: &mut Account<Consortium> = &mut ctx.accounts.consortium;  
-        question.question = question_question;        
-        question.deadline = question_deadline;        
-        consortium.question_count += 1;   
-        Ok(())
-    }
-
-    // Creates a PDA for the answer
-    pub fn add_answer(ctx: Context<AddAnswer>, text: String) -> Result<()> {        
-        let question: &mut Account<Question> = &mut ctx.accounts.question;
-        let answer: &mut Account<Answer> = &mut ctx.accounts.answer;     
-        question.ans_counter += 1;      
-        answer.text = text;
-        Ok(())
-    }
+    // // Creates a PDA for the answer
+    // pub fn add_answer(ctx: Context<AddAnswer>, text: String) -> Result<()> {        
+    //     let proposal: &mut Account<Proposal> = &mut ctx.accounts.question;
+    //     let answer: &mut Account<Answer> = &mut ctx.accounts.answer;     
+    //     question.vote_counter += 1;      
+    //     answer.text = text;
+    //     Ok(())
+    // }
 
     // Creates a PDA for a casted vote
     pub fn vote(ctx: Context<Vote>) -> Result<()> {              
-        let answer: &mut Account<Answer> = &mut ctx.accounts.answer;  
-        let member: &mut Account<Member> = &mut ctx.accounts.member_struct;          
-        answer.votes += member.weight as u32;    // Cast vote        
+        let proposal: &mut Account<Proposal> = &mut ctx.accounts.proposal;  
+        // let voter: &mut Account<Voter> = &mut ctx.accounts.voter_struct;          
+        proposal.vote_counter += 1; // TODO: increment according to received lamports     
         Ok(())
     }
 
     // Winning answer gets validated and stored in the question PDA
     pub fn tally(ctx: Context<Tally>) -> Result<()> {   
 
-        let question: &mut Account<Question> = &mut ctx.accounts.question;        
+        let voting: &mut Account<Voting> = &mut ctx.accounts.voting;        
 
         // All of the acounts not explicitely mentioned in the Tally context
-        let answers: Vec<AccountInfo> = ctx.remaining_accounts.to_vec();
+        let proposals: Vec<AccountInfo> = ctx.remaining_accounts.to_vec();
         let mut winner: (u32, u8) = (0,0);            
 
-        msg!("Receieved {:?} answers accounts",answers.len());
+        msg!("Receieved {:?} answers accounts",proposals.len());
 
         // Check that accounts passed is equal to the counter
-        assert!(answers.len() == question.ans_counter as usize);        
+        assert!(proposals.len() == voting.proposal_count as usize);        
 
-        // Need to loop over answer indexes of the given question        
-        for (idx, answer) in answers.iter().enumerate() {      
+        // Need to loop over proposal indexes 
+        for (idx, proposal) in proposals.iter().enumerate() {      
 
             // Check that the PDA match
-            let (pda_answer, _bump) = Pubkey::find_program_address(&[question.key().as_ref(), &[idx as u8]], &ctx.program_id);                        
-            msg!("pda_answer: {:?}",pda_answer);
-            msg!("answer.key(): {:?}",answer.key());
-            assert!(pda_answer == answer.key());            
+            let (pda_proposal, _bump) = Pubkey::find_program_address(&[voting.key().as_ref(), &[idx as u8]], &ctx.program_id);                        
+            msg!("pda_proposal: {:?}",pda_proposal);
+            msg!("proposal.key(): {:?}",proposal.key());
+            assert!(pda_proposal == proposal.key());            
             
             // Cast AccountInfo as Asnwer struct
-            let tmp_answer: Account<Answer> = Account::try_from(&answer)?;        
+            let tmp_proposal: Account<Proposal> = Account::try_from(&proposal)?;        
 
-            msg!("{:?} votes {:?}",tmp_answer.text, tmp_answer.votes);
+            msg!("{:?} votes {:?}",tmp_proposal.proposal, tmp_proposal.vote_counter);
             
             // Check if votes exceed current leader
-            if tmp_answer.votes > winner.0 {
-                winner.0 = tmp_answer.votes;
+            if tmp_proposal.vote_counter > winner.0 {
+                winner.0 = tmp_proposal.vote_counter;
                 winner.1 = idx as u8;
             }
         }        
 
         // Set the winner idx in the question account
-        question.winner_idx = winner.1;
-        question.winner_selected = true;
+        voting.winner_idx = winner.1;
+        voting.winner_selected = true;
 
         msg!("EXIT");
 
@@ -99,7 +99,7 @@ mod voting {
 
 #[derive(Accounts)]
 #[instruction(seed: String)]
-pub struct CreateConsortium<'info> {            
+pub struct CreateVoting<'info> {            
     #[account(
         init, 
         seeds = [
@@ -110,104 +110,104 @@ pub struct CreateConsortium<'info> {
         payer = chairperson, 
         space = 80)
     ]
-    pub consortium: Account<'info, Consortium>,       
+    pub voting: Account<'info, Voting>,       
     #[account(mut)]                                 
     pub chairperson: Signer<'info>,                  
     pub system_program: Program<'info, System>,      
 }
 
-#[derive(Accounts)]
-#[instruction(weight: u8, propose_answers: bool, member_acc: Pubkey)] 
-pub struct AddMember<'info> {            
-    #[account(
-        init,     
-        constraint = chairperson.key == &consortium.chairperson,
-        seeds = [
-            consortium.key().as_ref(), 
-            member_acc.as_ref()
-        ],         
-        bump, 
-        payer = chairperson, 
-        space = 180)
-    ]
-    pub member: Account<'info, Member>,       
-    #[account(mut)]    
-    pub consortium: Account<'info, Consortium>,      
-    #[account(mut)]                
-    pub chairperson: Signer<'info>,                  
-    pub system_program: Program<'info, System>,      
-}
+// #[derive(Accounts)]
+// #[instruction(weight: u8, propose_answers: bool, member_acc: Pubkey)] 
+// pub struct AddMember<'info> {            
+//     #[account(
+//         init,     
+//         constraint = chairperson.key == &voting.chairperson,
+//         seeds = [
+//             voting.key().as_ref(), 
+//             member_acc.as_ref()
+//         ],         
+//         bump, 
+//         payer = chairperson, 
+//         space = 180)
+//     ]
+//     pub voter: Account<'info, Voter>,       
+//     #[account(mut)]    
+//     pub voting: Account<'info, Voting>,      
+//     #[account(mut)]                
+//     pub chairperson: Signer<'info>,                  
+//     pub system_program: Program<'info, System>,      
+// }
 
 #[derive(Accounts)]
-pub struct AddQuestion<'info> {            
+pub struct AddProposal<'info> {            
     #[account(
         init, 
         seeds = [
-            consortium.key().as_ref(), 
-            &consortium.question_count.to_be_bytes()
+            voting.key().as_ref(), 
+            &voting.proposal_count.to_be_bytes()
         ], 
         bump, 
         payer = chairperson, 
         space = 180)
     ]
-    pub question: Account<'info, Question>,       
+    pub proposal: Account<'info, Proposal>,       
     #[account(mut)]        
-    pub consortium: Account<'info, Consortium>,      
+    pub voting: Account<'info, Voting>,      
     #[account(mut)]                
     pub chairperson: Signer<'info>,                  
     pub system_program: Program<'info, System>,      
 }
 
-#[derive(Accounts)]
-pub struct AddAnswer<'info> {            
-    #[account(
-        init, 
-        constraint = member_struct.propose_answers == true && 
-                    question.deadline > Clock::get().unwrap().unix_timestamp &&
-                    question.winner_selected == false &&  
-                    member_struct.key == *member.key,
-        seeds = [
-            question.key().as_ref(), 
-            &question.ans_counter.to_be_bytes()
-        ], 
-        bump, 
-        payer = member, 
-        space = 100)
-    ]
-    pub answer: Account<'info, Answer>,           
-    #[account(mut, constraint = member_struct.propose_answers == true)]
-    pub question: Account<'info, Question>,           
-    #[account(mut)]                
-    pub member: Signer<'info>,                    
-    pub member_struct: Account<'info, Member>,     
-    pub system_program: Program<'info, System>,      
-}
+// #[derive(Accounts)]
+// pub struct AddAnswer<'info> {            
+//     #[account(
+//         init, 
+//         constraint = voter_struct.propose_answers == true && 
+//                     voting.deadline > Clock::get().unwrap().unix_timestamp &&
+//                     voting.winner_selected == false &&  
+//                     voter_struct.key == *voter.key,
+//         seeds = [
+//             question.key().as_ref(), 
+//             &question.vote_counter.to_be_bytes()
+//         ], 
+//         bump, 
+//         payer = voter, 
+//         space = 100)
+//     ]
+//     pub answer: Account<'info, Answer>,           
+//     #[account(mut, constraint = voter_struct.propose_answers == true)]
+//     pub proposal: Account<'info, Proposal>,           
+//     #[account(mut)]                
+//     pub voter: Signer<'info>,                    
+//     pub voter_struct: Account<'info, Voter>,     
+//     pub system_program: Program<'info, System>,      
+// }
 
 #[derive(Accounts)]
 pub struct Vote<'info> {           
     #[account(
         init, 
-        constraint = question.deadline > Clock::get().unwrap().unix_timestamp && 
-        question.winner_selected == false &&
-        member_struct.key == *member.key,                                                
+        constraint = voting.deadline > Clock::get().unwrap().unix_timestamp && 
+        voting.winner_selected == false &&
+        voter_struct.key == *voter.key,                                                
         seeds = [
-            member.key().as_ref(), 
-            question.key().as_ref() 
+            voter.key().as_ref(), 
+            proposal.key().as_ref() 
         ], 
         bump, 
-        payer = member, 
+        payer = voter, 
         space = 8)
     ]
     pub voted: Account<'info, Voted>,       // Account that by existing (having lamports) shows that this address has voted
     #[account(
         mut, 
-        constraint = question.deadline > Clock::get().unwrap().unix_timestamp)
+        constraint = voting.deadline > Clock::get().unwrap().unix_timestamp)
     ]
-    pub answer: Account<'info, Answer>,           // Answer PDA to transfer weighted votes to
-    pub question: Account<'info, Question>,  
+    pub proposal: Account<'info, Proposal>,
+    pub voting: Account<'info, Voting>,  
     #[account(mut)]                
-    pub member: Signer<'info>,                    // Signature of the member    
-    pub member_struct: Account<'info, Member>,        
+    pub voter: Signer<'info>,                    // Signature of the member    
+    pub voter_struct: Account<'info, Voter>,        
     pub system_program: Program<'info, System>,       
 }
 
@@ -216,12 +216,12 @@ pub struct Tally<'info> {
     #[account(mut)]                
     pub caller: Signer<'info>,                  
     #[account(mut, 
-        constraint = (caller.key() == consortium.chairperson ||
-                    question.deadline < Clock::get().unwrap().unix_timestamp) 
-                    && question.winner_selected  == false
+        constraint = (caller.key() == voting.chairperson ||
+                voting.deadline < Clock::get().unwrap().unix_timestamp) 
+                    && voting.winner_selected  == false
     )]        
-    pub question: Account<'info, Question>,          // To set index of the winning answer            
-    pub consortium: Account<'info, Consortium>,      
+    pub proposal: Account<'info, Proposal>,          // To set index of the winning answer            
+    pub voting: Account<'info, Voting>,      
 }
 
 
@@ -229,13 +229,16 @@ pub struct Tally<'info> {
 ////////////////////////////////////////////////////////////////
 
 #[account]
-pub struct Consortium {    
+pub struct Voting {    
     pub chairperson: Pubkey,
-    pub question_count: u32,     
+    pub proposal_count: u32,
+    pub winner_idx: u8,    
+    pub winner_selected: bool,
+    pub deadline: i64,
 }
 
 #[account]
-pub struct Member {        
+pub struct Voter {        
     pub key: Pubkey,
     pub weight: u8, 
     pub propose_answers: bool,
@@ -245,17 +248,14 @@ pub struct Member {
 pub struct Voted {}
 
 #[account]
-pub struct Question { 
-    pub question: String, 
-    pub ans_counter: u8,  
-    pub deadline: i64,
-    pub winner_idx: u8,    
-    pub winner_selected: bool,    
+pub struct Proposal { 
+    pub proposal: String, 
+    pub vote_counter: u32,
 }
 
-#[account]
-pub struct Answer { 
-    pub text: String,      
-    pub votes: u32,        
-}
+// #[account]
+// pub struct Answer { 
+//     pub text: String,      
+//     pub votes: u32,        
+// }
 
