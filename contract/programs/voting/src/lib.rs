@@ -7,9 +7,10 @@ mod voting {
     use super::*;       
 
     // Creates a PDA for the voting
-    pub fn initialise_voting(ctx: Context<CreateVoting>, _seed: String) -> Result<()> {        
+    pub fn initialise_voting(ctx: Context<CreateVoting>, _seed: String, voting_deadline: i64) -> Result<()> {        
         let voting: &mut Account<Voting> = &mut ctx.accounts.voting;        
-        voting.chairperson = ctx.accounts.chairperson.key();                         
+        voting.chairperson = ctx.accounts.chairperson.key();  
+        voting.deadline = voting_deadline;                           
         Ok(())
     }
 
