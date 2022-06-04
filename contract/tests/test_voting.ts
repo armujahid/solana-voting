@@ -13,10 +13,10 @@ describe("Tests", async () => {
 
   // Test account address generated here
   const chairperson = anchor.web3.Keypair.generate();
-  const member1 = anchor.web3.Keypair.generate();
-  const member2 = anchor.web3.Keypair.generate();
-  const member3 = anchor.web3.Keypair.generate();
-  const member4 = anchor.web3.Keypair.generate();
+  const voter1 = anchor.web3.Keypair.generate();
+  const voter2 = anchor.web3.Keypair.generate();
+  const voter3 = anchor.web3.Keypair.generate();
+  const voter4 = anchor.web3.Keypair.generate();
   const memberScammer = anchor.web3.Keypair.generate();
 
   // Get program IDL for rock-paper-scissor
@@ -25,14 +25,14 @@ describe("Tests", async () => {
   // Global addresses for easy loading to subsequent tests
   let bump;
   let votingPDA;
-  let proposalPDA;
+  let proposal1PDA;
   let questionPDA;
-  let answerPDA;
+  let proposal2PDA;
   let answerPDA2;
   let answerPDAFails;
-  let voterPDA;
-  let memberPDA2;
-  let memberPDA3;
+  let voter1PDA;
+  let voter2PDA;
+  let voter3PDA;
   let votedPDA;
   let votedPDA2;
   let votedPDA3;
@@ -45,25 +45,25 @@ describe("Tests", async () => {
     // Top up all acounts that will need lamports for account creation
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        member1.publicKey,
+        voter1.publicKey,
         2 * LAMPORTS_PER_SOL
       )
     );
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        member2.publicKey,
+        voter2.publicKey,
         2 * LAMPORTS_PER_SOL
       )
     );
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        member3.publicKey,
+        voter3.publicKey,
         2 * LAMPORTS_PER_SOL
       )
     );
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        member4.publicKey,
+        voter4.publicKey,
         2 * LAMPORTS_PER_SOL
       )
     );
@@ -121,19 +121,20 @@ describe("Tests", async () => {
 
 
   it("Chairman can add proposal", async () => {
-    let proposalText = "What's the best fruit?";
+    let proposalText = "proposal1";
 
     // Get voting counter for PDA derivation
     let votingProposalCounter = (
       await program.account.voting.fetch(votingPDA)
     ).proposalCount;
+    // console.log({votingProposalCounter})
 
     // Consutruct buffer containing latest index
     const proposalCounterBuffer = Buffer.alloc(4);
     proposalCounterBuffer.writeUIntBE(votingProposalCounter, 0, 4);
 
     // Derive proposal account
-    [proposalPDA, bump] = await anchor.web3.PublicKey.findProgramAddress(
+    [proposal1PDA, bump] = await anchor.web3.PublicKey.findProgramAddress(
       [
         Buffer.from(votingPDA.toBytes()), // Byte buffer from voting PDA
         proposalCounterBuffer, // Byte buffer of the proposal counter
@@ -146,257 +147,167 @@ describe("Tests", async () => {
       .accounts({
         voting: votingPDA,
         chairperson: chairperson.publicKey,
-        proposal: proposalPDA,
+        proposal: proposal1PDA,
         systemProgram: SystemProgram.programId,
       })
       .signers([chairperson])
       .rpc();
 
     // Retrieve proposal account state
-    let proposalState = await program.account.proposal.fetch(proposalPDA);
+    let proposalState = await program.account.proposal.fetch(proposal1PDA);
 
     // Assert proposal text is correct
     expect(proposalState.proposal).to.equal(proposalText);
 
     // Assert no votes have been added
     expect(proposalState.voteCounter).to.equal(0);
+
+    votingProposalCounter = (
+      await program.account.voting.fetch(votingPDA)
+    ).proposalCount;
+    // console.log({votingProposalCounter})
   });
 
-  // it("Member with correct privileges can submit an answer", async () => {
-  //   // Consutruct buffer containing latest answer index
-  //   const answerCounterBuffer = Buffer.alloc(1);
-  //   answerCounterBuffer.writeUIntBE(
-  //     (await program.account.proposal.fetch(questionPDA)).ansCounter,
-  //     0,
-  //     1
-  //   );
+  it("Chairman can add another proposal", async () => {
+    let proposalText = "proposal2";
 
-  //   // Derive the address of the answer account
-  //   [answerPDA, bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //     [Buffer.from(questionPDA.toBytes()), answerCounterBuffer],
-  //     program.programId
-  //   );
+    // Get voting counter for PDA derivation
+    let votingProposalCounter = (
+      await program.account.voting.fetch(votingPDA)
+    ).proposalCount;
+    // console.log({votingProposalCounter})
 
-  //   await program.methods
-  //     .addAnswer(answerText)
-  //     .accounts({
-  //       proposal: questionPDA,
-  //       member: member1.publicKey,
-  //       memberStruct: voterPDA,
-  //       answer: answerPDA,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([member1])
-  //     .rpc();
+    // Consutruct buffer containing latest index
+    const proposalCounterBuffer = Buffer.alloc(4);
+    proposalCounterBuffer.writeUIntBE(votingProposalCounter, 0, 4);
 
-  //   // Assert proposal answer count has incremented
-  //   expect(
-  //     (await program.account.proposal.fetch(questionPDA)).ansCounter
-  //   ).to.equal(1);
+    // Derive proposal account
+    [proposal2PDA, bump] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from(votingPDA.toBytes()), // Byte buffer from voting PDA
+        proposalCounterBuffer, // Byte buffer of the proposal counter
+      ],
+      program.programId
+    );
 
-  //   // Retrieve state of the answer account
-  //   let answerState = await program.account.answer.fetch(answerPDA);
+    await program.methods
+      .addProposal(proposalText)
+      .accounts({
+        voting: votingPDA,
+        chairperson: chairperson.publicKey,
+        proposal: proposal2PDA,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([chairperson])
+      .rpc();
 
-  //   // Assert answer set correctly
-  //   expect(answerState.text).to.equal(answerText);
+    // Retrieve proposal account state
+    let proposalState = await program.account.proposal.fetch(proposal2PDA);
 
-  //   // Assert answer votes is initialised to zero
-  //   expect(answerState.votes).to.equal(0);
+    // Assert proposal text is correct
+    expect(proposalState.proposal).to.equal(proposalText);
 
-  //   // Consutruct buffer containing latest answer index
-  //   const answerCounterBuffer2 = Buffer.alloc(1);
-  //   answerCounterBuffer2.writeUIntBE(
-  //     (await program.account.proposal.fetch(questionPDA)).ansCounter,
-  //     0,
-  //     1
-  //   );
+    // Assert no votes have been added
+    expect(proposalState.voteCounter).to.equal(0);
 
-  //   // Derive the address of the answer account
-  //   [answerPDA2, bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //     [Buffer.from(questionPDA.toBytes()), answerCounterBuffer2],
-  //     program.programId
-  //   );
+    votingProposalCounter = (
+      await program.account.voting.fetch(votingPDA)
+    ).proposalCount;
+    // console.log({votingProposalCounter})
+  });
 
-  //   await program.methods
-  //     .addAnswer(answerText2)
-  //     .accounts({
-  //       proposal: questionPDA,
-  //       member: member2.publicKey,
-  //       memberStruct: memberPDA2,
-  //       answer: answerPDA2,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([member2])
-  //     .rpc();
+  it("Vote cast as voter1 for proposal1", async () => {
+    // [voter1PDA, bump] = await anchor.web3.PublicKey.findProgramAddress(
+    //   [
+    //     Buffer.from(votingPDA.toBytes()),
+    //     Buffer.from(voter1.publicKey.toBytes()),
+    //   ],
+    //   program.programId
+    // );
 
-  //   // Assert proposal answer count has incremented to 2
-  //   expect(
-  //     (await program.account.proposal.fetch(questionPDA)).ansCounter
-  //   ).to.equal(2);
+    // Derive the address of the voted account
+    [votedPDA, bump] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from(voter1.publicKey.toBytes()),
+        // Buffer.from(votingPDA.toBytes()), // allow vote to just one proposal
+        Buffer.from(proposal1PDA.toBytes()), // allow votes to multiple proposals
+      ],
+      program.programId
+    );
 
-  //   // Retrieve state of the answer account
-  //   let answerState2 = await program.account.answer.fetch(answerPDA2);
+    // Get start answer tally
+    let tallyStart: number = (await program.account.proposal.fetch(proposal1PDA))
+      .voteCounter;
 
-  //   // Assert answer set correctly
-  //   expect(answerState2.text).to.equal(answerText2);
+    await program.methods
+      .vote()
+      .accounts({
+        voted: votedPDA,
+        voting: votingPDA,
+        proposal: proposal1PDA,
+        voter: voter1.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([voter1])
+      .rpc();
 
-  //   // Assert answer votes is zero
-  //   expect(answerState2.votes).to.equal(0);
-  // });
+    // Get end answer tally
+    let tallyEnd: number = (await program.account.proposal.fetch(proposal1PDA))
+      .voteCounter;
 
-  // it("Member without correct privileges can't submit an answer", async () => {
-  //   try {
-  //     // Consutruct buffer containing latest answer index
-  //     const answerCounterBuffer = Buffer.alloc(1);
-  //     answerCounterBuffer.writeUIntBE(
-  //       (await program.account.proposal.fetch(questionPDA)).ansCounter,
-  //       0,
-  //       1
-  //     );
+    // Assert that tally has increased by the weight of the member
+    expect(tallyEnd - tallyStart).to.be.equal(1);
 
-  //     // Derive the address of the answer account
-  //     [answerPDAFails, bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //       [Buffer.from(questionPDA.toBytes()), answerCounterBuffer],
-  //       program.programId
-  //     );
+    // Check that votedPDA exists by account having lamports
+    await provider.connection.getBalance(votedPDA);
 
-  //     await program.methods
-  //       .addAnswer("Sausage")
-  //       .accounts({
-  //         proposal: questionPDA,
-  //         member: member3.publicKey,
-  //         memberStruct: memberPDA3,
-  //         answer: answerPDAFails,
-  //         systemProgram: SystemProgram.programId,
-  //       })
-  //       .signers([member3])
-  //       .rpc();
+    
 
-  //     assert(false);
-  //   } catch (err) {
-  //     assert(err);
-  //   }
-  // });
+  });
 
-  // it("Can't add member using privillaged member's PDA", async () => {
-  //   try {
-  //     // Consutruct buffer containing latest answer index
-  //     const answerCounterBuffer = Buffer.alloc(1);
-  //     answerCounterBuffer.writeUIntBE(
-  //       (await program.account.proposal.fetch(questionPDA)).ansCounter,
-  //       0,
-  //       1
-  //     );
+  it("Vote cast as voter2 for proposal2", async () => {
+    // Derive the address of the voted account
+    [votedPDA2, bump] = await anchor.web3.PublicKey.findProgramAddress(
+      [
+        Buffer.from(voter2.publicKey.toBytes()),
+        // Buffer.from(votingPDA.toBytes()), // allow vote to just one proposal
+        Buffer.from(proposal2PDA.toBytes()), // allow votes to multiple proposals
+      ],
+      program.programId
+    );
 
-  //     // Derive the address of the answer account
-  //     [answerPDAFails, bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //       [Buffer.from(questionPDA.toBytes()), answerCounterBuffer],
-  //       program.programId
-  //     );
+    // Get start answer tally
+    let tallyStart: number = (await program.account.proposal.fetch(proposal2PDA))
+      .voteCounter;
 
-  //     await program.methods
-  //       .addAnswer("Dog")
-  //       .accounts({
-  //         proposal: questionPDA,
-  //         member: member2.publicKey, // Passing member3 account
-  //         memberStruct: memberPDA2, // Passing member3 PDA
-  //         answer: answerPDAFails,
-  //         systemProgram: SystemProgram.programId,
-  //       })
-  //       .signers([memberScammer])
-  //       .rpc();
+    await program.methods
+      .vote()
+      .accounts({
+        voted: votedPDA2,
+        voting: votingPDA,
+        proposal: proposal2PDA,
+        voter: voter2.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([voter2])
+      .rpc();
 
-  //     assert(false);
-  //   } catch (err) {
-  //     assert(err);
-  //   }
-  // });
+    // Get end answer tally
+    let tallyEnd: number = (await program.account.proposal.fetch(proposal2PDA))
+      .voteCounter;
 
-  // it("Vote cast as member1 for answer1", async () => {
-  //   // Derive the address of the voted account
-  //   [votedPDA, bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //     [
-  //       Buffer.from(member1.publicKey.toBytes()),
-  //       Buffer.from(questionPDA.toBytes()),
-  //     ],
-  //     program.programId
-  //   );
+    // Assert that tally has increased by the weight of the member
+    expect(tallyEnd - tallyStart).to.be.equal(1);
 
-  //   // Get start answer tally
-  //   let tallyStart: number = (await program.account.answer.fetch(answerPDA))
-  //     .votes;
+    // Check that votedPDA exists by account having lamports
+    await provider.connection.getBalance(votedPDA2);
+  });
 
-  //   await program.methods
-  //     .vote()
-  //     .accounts({
-  //       answer: answerPDA,
-  //       voted: votedPDA,
-  //       proposal: questionPDA,
-  //       member: member1.publicKey,
-  //       memberStruct: voterPDA,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([member1])
-  //     .rpc();
-
-  //   // Get end answer tally
-  //   let tallyEnd: number = (await program.account.answer.fetch(answerPDA))
-  //     .votes;
-  //   let memberWeight: number = (await program.account.member.fetch(voterPDA))
-  //     .weight;
-
-  //   // Assert that tally has increased by the weight of the member
-  //   expect(tallyEnd - tallyStart).to.be.equal(memberWeight);
-
-  //   // Check that votedPDA exists by account having lamports
-  //   await provider.connection.getBalance(votedPDA);
-  // });
-
-  // it("Vote cast as member2 for answer2", async () => {
-  //   // Derive the address of the voted account
-  //   [votedPDA2, bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //     [
-  //       Buffer.from(member2.publicKey.toBytes()),
-  //       Buffer.from(questionPDA.toBytes()),
-  //     ],
-  //     program.programId
-  //   );
-
-  //   // Get start answer tally
-  //   let tallyStart2: number = (await program.account.answer.fetch(answerPDA2))
-  //     .votes;
-
-  //   await program.methods
-  //     .vote()
-  //     .accounts({
-  //       answer: answerPDA2,
-  //       voted: votedPDA2,
-  //       proposal: questionPDA,
-  //       member: member2.publicKey,
-  //       memberStruct: memberPDA2,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([member2])
-  //     .rpc();
-
-  //   // Get end answer tally
-  //   let tallyEnd2: number = (await program.account.answer.fetch(answerPDA2))
-  //     .votes;
-  //   let memberWeight2: number = (await program.account.member.fetch(memberPDA2))
-  //     .weight;
-
-  //   // Assert that tally has increased by the weight of the member
-  //   expect(tallyEnd2 - tallyStart2).to.be.equal(memberWeight2);
-
-  //   // Check that votedPDA exists by account having lamports
-  //   await provider.connection.getBalance(votedPDA2);
-  // });
-
-  // it("Vote cast as member3 for answer1", async () => {
+  // it("Vote cast as voter3 for answer1", async () => {
   //   // Derive the address of the voted account
   //   [votedPDA3, bump] = await anchor.web3.PublicKey.findProgramAddress(
   //     [
-  //       Buffer.from(member3.publicKey.toBytes()),
+  //       Buffer.from(voter3.publicKey.toBytes()),
   //       Buffer.from(questionPDA.toBytes()),
   //     ],
   //     program.programId
@@ -412,17 +323,17 @@ describe("Tests", async () => {
   //       answer: answerPDA,
   //       voted: votedPDA3,
   //       proposal: questionPDA,
-  //       member: member3.publicKey,
-  //       memberStruct: memberPDA3,
+  //       member: voter3.publicKey,
+  //       memberStruct: voter3PDA,
   //       systemProgram: SystemProgram.programId,
   //     })
-  //     .signers([member3])
+  //     .signers([voter3])
   //     .rpc();
 
   //   // Get end answer1 tally
   //   let tallyEnd: number = (await program.account.answer.fetch(answerPDA))
   //     .votes;
-  //   let memberWeight3: number = (await program.account.member.fetch(memberPDA3))
+  //   let memberWeight3: number = (await program.account.member.fetch(voter3PDA))
   //     .weight;
 
   //   // Assert that tally has increased by the weight of the member
@@ -454,8 +365,8 @@ describe("Tests", async () => {
   //         answer: answerPDA2,
   //         voted: votedPDA2,
   //         proposal: questionPDA,
-  //         member: member3.publicKey, // Passing member3 account
-  //         memberStruct: memberPDA3, // Passing member3 PDA
+  //         member: voter3.publicKey, // Passing voter3 account
+  //         memberStruct: voter3PDA, // Passing voter3 PDA
   //         systemProgram: SystemProgram.programId,
   //       })
   //       .signers([memberScammer])

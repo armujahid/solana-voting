@@ -189,8 +189,8 @@ pub struct Vote<'info> {
     #[account(
         init, 
         constraint = voting.deadline > Clock::get().unwrap().unix_timestamp && 
-        voting.winner_selected == false &&
-        voter_struct.key == *voter.key,                                                
+        voting.winner_selected == false, //&&
+        // voter_struct.key == *voter.key,                                                
         seeds = [
             voter.key().as_ref(), 
             proposal.key().as_ref() 
@@ -204,11 +204,12 @@ pub struct Vote<'info> {
         mut, 
         constraint = voting.deadline > Clock::get().unwrap().unix_timestamp)
     ]
+    pub voting: Account<'info, Voting>,
+    #[account(mut)]                
     pub proposal: Account<'info, Proposal>,
-    pub voting: Account<'info, Voting>,  
     #[account(mut)]                
     pub voter: Signer<'info>,                    // Signature of the member    
-    pub voter_struct: Account<'info, Voter>,        
+    // pub voter_struct: Account<'info, Voter>,        
     pub system_program: Program<'info, System>,       
 }
 
@@ -238,12 +239,10 @@ pub struct Voting {
     pub deadline: i64,
 }
 
-#[account]
-pub struct Voter {        
-    pub key: Pubkey,
-    pub weight: u8, 
-    pub propose_answers: bool,
-}
+// #[account]
+// pub struct Voter {        
+//     pub key: Pubkey,
+// }
 
 #[account]
 pub struct Voted {}
