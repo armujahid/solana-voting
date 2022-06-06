@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.swv-dropdown {
+    @apply w-full;
+}
+
+.swv-button {
+    @apply rounded-full w-full;
+}
+
+.swv-button-trigger {
+    @apply bg-pink-500 justify-center !important;
+}
+
+.swv-dropdown-list {
+    @apply top-auto bottom-full md:top-full md:bottom-auto md:left-0 md:right-auto;
+}
+
+.swv-dropdown-list-active {
+    @apply transform -translate-y-3 md:translate-y-3;
+}
