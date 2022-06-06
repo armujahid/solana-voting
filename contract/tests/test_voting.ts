@@ -378,139 +378,49 @@ describe("Tests", async () => {
     await provider.connection.getBalance(votedPDA2);
   });
 
-  // it("Vote cast as voter3 for answer1", async () => {
-  //   // Derive the address of the voted account
-  //   [votedPDA3, bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //     [
-  //       Buffer.from(voter3.publicKey.toBytes()),
-  //       Buffer.from(questionPDA.toBytes()),
-  //     ],
-  //     program.programId
-  //   );
 
-  //   // Get start answer1 tally
-  //   let tallyStart: number = (await program.account.answer.fetch(answerPDA))
-  //     .votes;
+  it("Tally votes fails with insuficcient proposal accounts provided", async () => {
+    try {
+      await program.methods
+        .tally()
+        .accounts({
+          voting: votingPDA,
+          caller: chairperson.publicKey,
+        })
+        .remainingAccounts([
+          { pubkey: proposal1PDA, isWritable: false, isSigner: false },
+        ])
+        .signers([chairperson])
+        .rpc();
 
-  //   await program.methods
-  //     .vote()
-  //     .accounts({
-  //       answer: answerPDA,
-  //       voted: votedPDA3,
-  //       proposal: questionPDA,
-  //       member: voter3.publicKey,
-  //       memberStruct: voter3PDA,
-  //       systemProgram: SystemProgram.programId,
-  //     })
-  //     .signers([voter3])
-  //     .rpc();
+      assert(false);
+    } catch (err) {
+      assert(err);
+    }
+  });
 
-  //   // Get end answer1 tally
-  //   let tallyEnd: number = (await program.account.answer.fetch(answerPDA))
-  //     .votes;
-  //   let memberWeight3: number = (await program.account.member.fetch(voter3PDA))
-  //     .weight;
+  it("Tally votes", async () => {
+    await program.methods
+      .tally()
+      .accounts({
+        voting: votingPDA,
+        caller: chairperson.publicKey,
+      })
+      .remainingAccounts([
+        { pubkey: proposal1PDA, isWritable: false, isSigner: false },
+        { pubkey: proposal2PDA, isWritable: false, isSigner: false },
+      ])
+      .signers([chairperson])
+      .rpc();
 
-  //   // Assert that tally has increased by the weight of the member
-  //   expect(tallyEnd - tallyStart).to.be.equal(memberWeight3);
+    // Retrieve PDA state for the proposal
+    let votingState = await program.account.proposal.fetch(votingPDA);
 
-  //   // Check that votedPDA exists by account having lamports
-  //   await provider.connection.getBalance(votedPDA2);
-  // });
+    // Assert proposal 1 won (index 0)
+    expect(votingState.winnerIdx).to.equal(0);
 
-  // it("Can't vote using privillaged member's PDA", async () => {
-  //   try {
-  //     // Consutruct buffer containing latest answer index
-  //     const answerCounterBuffer = Buffer.alloc(1);
-  //     answerCounterBuffer.writeUIntBE(
-  //       (await program.account.proposal.fetch(questionPDA)).ansCounter,
-  //       0,
-  //       1
-  //     );
+    // Assert vote is over
+    expect(votingState.winnerSelected).to.equal(true);
 
-  //     // Derive the address of the answer account
-  //     [answerPDAFails, bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //       [Buffer.from(questionPDA.toBytes()), answerCounterBuffer],
-  //       program.programId
-  //     );
-
-  //     await program.methods
-  //       .vote()
-  //       .accounts({
-  //         answer: answerPDA2,
-  //         voted: votedPDA2,
-  //         proposal: questionPDA,
-  //         member: voter3.publicKey, // Passing voter3 account
-  //         memberStruct: voter3PDA, // Passing voter3 PDA
-  //         systemProgram: SystemProgram.programId,
-  //       })
-  //       .signers([memberScammer])
-  //       .rpc();
-
-  //     assert(false);
-  //   } catch (err) {
-  //     assert(err);
-  //   }
-  // });
-
-  // it("Tally votes fails with insuficcient answer accounts provided", async () => {
-  //   try {
-  //     await program.methods
-  //       .tally()
-  //       .accounts({
-  //         voting: votingPDA,
-  //         caller: chairperson.publicKey,
-  //         proposal: questionPDA,
-  //       })
-  //       .remainingAccounts([
-  //         { pubkey: answerPDA, isWritable: false, isSigner: false },
-  //       ])
-  //       .signers([chairperson])
-  //       .rpc();
-
-  //     assert(false);
-  //   } catch (err) {
-  //     assert(err);
-  //   }
-  // });
-
-  // it("Tally votes", async () => {
-  //   await program.methods
-  //     .tally()
-  //     .accounts({
-  //       voting: votingPDA,
-  //       caller: chairperson.publicKey,
-  //       proposal: questionPDA,
-  //     })
-  //     .remainingAccounts([
-  //       { pubkey: answerPDA, isWritable: false, isSigner: false },
-  //       { pubkey: answerPDA2, isWritable: false, isSigner: false },
-  //     ])
-  //     .signers([chairperson])
-  //     .rpc();
-
-  //   // Retrieve PDA state for the proposal
-  //   let questionState = await program.account.proposal.fetch(questionPDA);
-
-  //   // Assert answer 0 won
-  //   expect(questionState.winnerIdx).to.equal(0);
-
-  //   // Assert vote is over
-  //   expect(questionState.winnerSelected).to.equal(true);
-
-  //   // Consutruct buffer containing latest answer index
-  //   const answerCounterBuffer = Buffer.alloc(1);
-  //   answerCounterBuffer.writeUIntBE(questionState.winnerIdx, 0, 1);
-
-  //   // Derive the address of the winning answer account
-  //   let [winnerAnswerPDA, bump] =
-  //     await anchor.web3.PublicKey.findProgramAddress(
-  //       [Buffer.from(questionPDA.toBytes()), answerCounterBuffer],
-  //       program.programId
-  //     );
-
-  //   // Assert right answer has been picked
-  //   let winnerAsnwerState = await program.account.answer.fetch(winnerAnswerPDA);
-  //   expect(winnerAsnwerState.text).to.equal(answerText);
-  // });
+  });
 });

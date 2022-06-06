@@ -13,7 +13,7 @@ wallet = "~/.config/solana/id.json"
 ## AGAIN
 
 [programs.localnet]
-voting = "8q9Xm51HBw8s8DknD5P11RvBm2WovX2VageztBf2xdzH"
+voting = "G3HV5PLLZj6NY73EpKaHeBFgyiDf6EHCqUyfUSQdWqRK"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

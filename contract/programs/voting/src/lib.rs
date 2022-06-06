@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("8q9Xm51HBw8s8DknD5P11RvBm2WovX2VageztBf2xdzH");
+declare_id!("G3HV5PLLZj6NY73EpKaHeBFgyiDf6EHCqUyfUSQdWqRK");
 
 #[program]
 mod voting {
@@ -222,8 +222,7 @@ pub struct Tally<'info> {
                 voting.deadline < Clock::get().unwrap().unix_timestamp) 
                     && voting.winner_selected  == false
     )]        
-    pub proposal: Account<'info, Proposal>,          // To set index of the winning answer            
-    pub voting: Account<'info, Voting>,      
+    pub voting: Account<'info, Voting>,  // To set index of the winning proposal      
 }
 
 
